@@ -1,197 +1,179 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
-import sqlite3
 from datetime import datetime
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from database import SessionLocal, User, Workout, Exercise, NutritionLog, Measurement, AIRecommendation, init_db
 
-app = FastAPI(title="IronTrack API")
+app = FastAPI(title="IronTrack API", description="Fitness tracking backend with AI recommendations")
 
-# Models
-class User(BaseModel):
+# CORS for Telegram Mini App
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+class UserCreate(BaseModel):
+    telegram_id: str
+    username: Optional[str] = None
+    full_name: str
+
+class UserResponse(BaseModel):
     id: int
-    telegram_id: int
-    username: str
-    created_at: str
+    telegram_id: str
+    username: Optional[str]
+    full_name: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
 
-class Workout(BaseModel):
-    id: int
-    user_id: int
-    exercise: str
+class ExerciseCreate(BaseModel):
+    name: str
     sets: int
     reps: int
-    weight: float
-    notes: Optional[str] = None
-    created_at: str
+    weight_kg: Optional[float] = None
+    duration_seconds: Optional[int] = None
 
-class Meal(BaseModel):
+class WorkoutCreate(BaseModel):
+    workout_type: str
+    duration_minutes: int
+    calories_burned: int
+    notes: Optional[str] = None
+    exercises: List[ExerciseCreate] = []
+
+class WorkoutResponse(BaseModel):
     id: int
     user_id: int
-    food: str
+    date: datetime
+    workout_type: str
+    duration_minutes: int
+    calories_burned: int
+    notes: Optional[str]
+    class Config:
+        from_attributes = True
+
+class NutritionLogCreate(BaseModel):
+    meal_type: str
+    food_name: str
     calories: int
-    protein: float
-    carbs: float
-    fat: float
-    created_at: str
+    protein_g: float
+    carbs_g: float
+    fats_g: float
 
-class AIRecommendation(BaseModel):
-    type: str  # "workout" or "nutrition"
-    recommendation: str
-    confidence: float
+class MeasurementCreate(BaseModel):
+    weight_kg: float
+    body_fat_percent: Optional[float] = None
+    muscle_mass_kg: Optional[float] = None
+    waist_cm: Optional[float] = None
+    chest_cm: Optional[float] = None
+    arms_cm: Optional[float] = None
 
-# Database helpers
-def get_db():
-    conn = sqlite3.connect("database/irontrack.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+class AIRecommendationCreate(BaseModel):
+    recommendation_type: str
+    content: str
+    confidence_score: float
 
-# Initialize DB
-def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id INTEGER UNIQUE,
-            username TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS workouts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            exercise TEXT,
-            sets INTEGER,
-            reps INTEGER,
-            weight REAL,
-            notes TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS meals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            food TEXT,
-            calories INTEGER,
-            protein REAL,
-            carbs REAL,
-            fat REAL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS ai_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            request_type TEXT,
-            request_data TEXT,
-            response_data TEXT,
-            safety_approved INTEGER,
-            human_approval_required INTEGER,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
-# Endpoints
+@app.post("/users/", response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.telegram_id == user.telegram_id).first()
+    if db_user:
+        return db_user
+    new_user = User(**user.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.get("/users/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.post("/workouts/", response_model=WorkoutResponse)
+def create_workout(workout: WorkoutCreate, user_id: int, db: Session = Depends(get_db)):
+    new_workout = Workout(
+        user_id=user_id,
+        workout_type=workout.workout_type,
+        duration_minutes=workout.duration_minutes,
+        calories_burned=workout.calories_burned,
+        notes=workout.notes
+    )
+    db.add(new_workout)
+    db.commit()
+    db.refresh(new_workout)
+    
+    for ex in workout.exercises:
+        exercise = Exercise(workout_id=new_workout.id, **ex.model_dump())
+        db.add(exercise)
+    db.commit()
+    return new_workout
+
+@app.get("/workouts/user/{user_id}", response_model=List[WorkoutResponse])
+def get_user_workouts(user_id: int, db: Session = Depends(get_db)):
+    workouts = db.query(Workout).filter(Workout.user_id == user_id).order_by(Workout.date.desc()).all()
+    return workouts
+
+@app.post("/nutrition/", response_model=dict)
+def log_nutrition(log: NutritionLogCreate, user_id: int, db: Session = Depends(get_db)):
+    new_log = NutritionLog(user_id=user_id, **log.model_dump())
+    db.add(new_log)
+    db.commit()
+    db.refresh(new_log)
+    return {"status": "success", "id": new_log.id}
+
+@app.post("/measurements/", response_model=dict)
+def add_measurement(measurement: MeasurementCreate, user_id: int, db: Session = Depends(get_db)):
+    new_measurement = Measurement(user_id=user_id, **measurement.model_dump())
+    db.add(new_measurement)
+    db.commit()
+    db.refresh(new_measurement)
+    return {"status": "success", "id": new_measurement.id}
+
+@app.post("/ai/recommend/", response_model=dict)
+def generate_recommendation(rec: AIRecommendationCreate, user_id: int, db: Session = Depends(get_db)):
+    new_rec = AIRecommendation(
+        user_id=user_id,
+        recommendation_type=rec.recommendation_type,
+        content=rec.content,
+        confidence_score=rec.confidence_score,
+        is_approved=True
+    )
+    db.add(new_rec)
+    db.commit()
+    db.refresh(new_rec)
+    return {"status": "success", "recommendation_id": new_rec.id}
+
+@app.get("/stats/{user_id}")
+def get_user_stats(user_id: int, db: Session = Depends(get_db)):
+    total_workouts = db.query(Workout).filter(Workout.user_id == user_id).count()
+    latest_measurement = db.query(Measurement).filter(Measurement.user_id == user_id).order_by(Measurement.date.desc()).first()
+    return {
+        "total_workouts": total_workouts,
+        "current_weight": latest_measurement.weight_kg if latest_measurement else None,
+        "last_updated": datetime.utcnow()
+    }
+
 @app.get("/")
-def read_root():
-    return {"status": "IronTrack API is running"}
-
-@app.post("/auth/telegram")
-def telegram_auth(telegram_id: int, username: str):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute(
-        "INSERT OR IGNORE INTO users (telegram_id, username) VALUES (?, ?)",
-        (telegram_id, username)
-    )
-    conn.commit()
-    
-    cursor.execute("SELECT * FROM users WHERE telegram_id = ?", (telegram_id,))
-    user = cursor.fetchone()
-    conn.close()
-    
-    if user:
-        return {"user_id": user["id"], "telegram_id": user["telegram_id"], "username": user["username"]}
-    raise HTTPException(status_code=400, detail="Auth failed")
-
-@app.post("/workouts/", response_model=Workout)
-def create_workout(workout: Workout):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO workouts (user_id, exercise, sets, reps, weight, notes)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (workout.user_id, workout.exercise, workout.sets, workout.reps, workout.weight, workout.notes))
-    
-    conn.commit()
-    workout_id = cursor.lastrowid
-    
-    cursor.execute("SELECT * FROM workouts WHERE id = ?", (workout_id,))
-    result = cursor.fetchone()
-    conn.close()
-    
-    return dict(result)
-
-@app.get("/workouts/{user_id}", response_model=List[Workout])
-def get_workouts(user_id: int):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM workouts WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-    results = cursor.fetchall()
-    conn.close()
-    return [dict(r) for r in results]
-
-@app.post("/meals/", response_model=Meal)
-def create_meal(meal: Meal):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO meals (user_id, food, calories, protein, carbs, fat)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (meal.user_id, meal.food, meal.calories, meal.protein, meal.carbs, meal.fat))
-    
-    conn.commit()
-    meal_id = cursor.lastrowid
-    
-    cursor.execute("SELECT * FROM meals WHERE id = ?", (meal_id,))
-    result = cursor.fetchone()
-    conn.close()
-    
-    return dict(result)
-
-@app.get("/meals/{user_id}", response_model=List[Meal])
-def get_meals(user_id: int):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM meals WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-    results = cursor.fetchall()
-    conn.close()
-    return [dict(r) for r in results]
-
-@app.post("/ai/recommend", response_model=AIRecommendation)
-def get_ai_recommendation(user_id: int, request_type: str, data: dict):
-    # Placeholder - will be connected to AI orchestrator
-    return AIRecommendation(
-        type=request_type,
-        recommendation="AI recommendation placeholder",
-        confidence=0.95
-    )
+def root():
+    return {"message": "IronTrack API is running!", "version": "1.0.0"}
 
 if __name__ == "__main__":
-    init_db()
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
