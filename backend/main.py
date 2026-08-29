@@ -6,11 +6,20 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from backend.database import SessionLocal, User, Workout, Exercise, NutritionLog, Measurement, AIRecommendation, init_db
 import os
-from openai import OpenAI
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Configure Google Gemini (Free Tier)
+gemini_key = os.getenv("GEMINI_API_KEY")
+if gemini_key and gemini_key != "YOUR_GEMINI_KEY_HERE":
+    genai.configure(api_key=gemini_key)
+    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+    AI_ENABLED = True
+else:
+    AI_ENABLED = False
+    gemini_model = None
 
 app = FastAPI(title="IronTrack API", description="Fitness tracking backend with AI recommendations")
 
@@ -158,21 +167,16 @@ def add_measurement(measurement: MeasurementCreate, user_id: int, db: Session = 
 
 @app.post("/ai/recommend/", response_model=dict)
 def generate_recommendation(req: AIRecommendationRequest, user_id: int, db: Session = Depends(get_db)):
-    # Call OpenAI API for real AI recommendation
+    # Call Google Gemini API for real AI recommendation (Free Tier)
     try:
+        if not AI_ENABLED:
+            raise Exception("Gemini API key not configured")
+        
         context_str = f"Context: {req.context}" if req.context else ""
-        prompt = f"User query: {req.query}. {context_str}. Provide a detailed fitness recommendation."
+        prompt = f"User query: {req.query}. {context_str}. Provide a detailed fitness recommendation in Russian language."
         
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert fitness coach and nutritionist. Provide safe, effective, and personalized recommendations."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=500
-        )
-        
-        ai_content = response.choices[0].message.content
+        response = gemini_model.generate_content(prompt)
+        ai_content = response.text
         confidence = 0.85  # Default confidence score
         
         new_rec = AIRecommendation(
@@ -189,12 +193,12 @@ def generate_recommendation(req: AIRecommendationRequest, user_id: int, db: Sess
         return {"status": "success", "recommendation_id": new_rec.id, "content": ai_content}
     
     except Exception as e:
-        # Fallback mock response when API key has no credits
+        # Fallback mock response when Gemini API key not configured
         is_nutrition = "питани" in req.query.lower() or "есть" in req.query.lower() or "nutrition" in req.query.lower() or "eat" in req.query.lower()
         
         if is_nutrition:
             mock_content = f"""
-🥗 **AI Nutrition Recommendation** (Demo Mode)
+🥗 **AI Nutrition Recommendation** (Demo Mode - Free)
 
 Based on your request: "{req.query}"
 
@@ -217,13 +221,12 @@ Based on your request: "{req.query}"
 **Tips:**
 - Eat within 2 hours after training
 - Stay hydrated (500ml water minimum)
-- Consider creatine 5g daily
 
-*Note: This is a demo response. Add credits to your OpenAI account for real AI-generated plans.*
+*Note: Add your free Google Gemini API key for real AI-generated plans.*
 """
         else:
             mock_content = f"""
-🏋️ **AI Coach Recommendation** (Demo Mode)
+🏋️ **AI Coach Recommendation** (Demo Mode - Free)
 
 Based on your request: "{req.query}"
 
@@ -240,7 +243,7 @@ Based on your request: "{req.query}"
 - Focus on proper form over weight
 - Train chest 2x per week with 48h rest between sessions
 
-*Note: This is a demo response. Add credits to your OpenAI account for real AI-generated plans.*
+*Note: Add your free Google Gemini API key for real AI-generated plans.*
 """
         
         rec_type = "nutrition_advice_demo" if is_nutrition else "workout_plan_demo"
@@ -255,7 +258,7 @@ Based on your request: "{req.query}"
         db.commit()
         db.refresh(new_rec)
         
-        return {"status": "success (demo mode)", "recommendation_id": new_rec.id, "content": mock_content, "note": "OpenAI API quota exceeded - using mock response"}
+        return {"status": "success (demo mode)", "recommendation_id": new_rec.id, "content": mock_content, "note": "Gemini API key not configured - using mock response"}
 
 @app.get("/stats/{user_id}")
 def get_user_stats(user_id: int, db: Session = Depends(get_db)):
