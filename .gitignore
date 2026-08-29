@@ -1,0 +1,75 @@
+# Documentation and notes
+*.md
+*.txt
+*.rst
+*.org
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.lock
+
+# Environment and configuration
+.env
+.env.local
+.env.*
+config/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build and distribution artifacts
+dist/
+build/
+target/
+out/
+bin/
+lib/
+
+# Dependencies
+node_modules/
+vendor/
+*.egg-info/
+.Python
+*.pyc
+__pycache__/
+
+# Test and coverage
+.coverage
+coverage/
+htmlcov/
+.test*
+*.test
+
+# Compression and archives
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
