@@ -4,7 +4,13 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from database import SessionLocal, User, Workout, Exercise, NutritionLog, Measurement, AIRecommendation, init_db
+from backend.database import SessionLocal, User, Workout, Exercise, NutritionLog, Measurement, AIRecommendation, init_db
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI(title="IronTrack API", description="Fitness tracking backend with AI recommendations")
 
@@ -79,6 +85,10 @@ class MeasurementCreate(BaseModel):
     chest_cm: Optional[float] = None
     arms_cm: Optional[float] = None
 
+class AIRecommendationRequest(BaseModel):
+    query: str
+    context: Optional[dict] = None
+
 class AIRecommendationCreate(BaseModel):
     recommendation_type: str
     content: str
@@ -147,18 +157,105 @@ def add_measurement(measurement: MeasurementCreate, user_id: int, db: Session = 
     return {"status": "success", "id": new_measurement.id}
 
 @app.post("/ai/recommend/", response_model=dict)
-def generate_recommendation(rec: AIRecommendationCreate, user_id: int, db: Session = Depends(get_db)):
-    new_rec = AIRecommendation(
-        user_id=user_id,
-        recommendation_type=rec.recommendation_type,
-        content=rec.content,
-        confidence_score=rec.confidence_score,
-        is_approved=True
-    )
-    db.add(new_rec)
-    db.commit()
-    db.refresh(new_rec)
-    return {"status": "success", "recommendation_id": new_rec.id}
+def generate_recommendation(req: AIRecommendationRequest, user_id: int, db: Session = Depends(get_db)):
+    # Call OpenAI API for real AI recommendation
+    try:
+        context_str = f"Context: {req.context}" if req.context else ""
+        prompt = f"User query: {req.query}. {context_str}. Provide a detailed fitness recommendation."
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert fitness coach and nutritionist. Provide safe, effective, and personalized recommendations."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500
+        )
+        
+        ai_content = response.choices[0].message.content
+        confidence = 0.85  # Default confidence score
+        
+        new_rec = AIRecommendation(
+            user_id=user_id,
+            recommendation_type="workout_plan" if "трениров" in req.query.lower() or "train" in req.query.lower() else "nutrition_advice",
+            content=ai_content,
+            confidence_score=confidence,
+            is_approved=True
+        )
+        db.add(new_rec)
+        db.commit()
+        db.refresh(new_rec)
+        
+        return {"status": "success", "recommendation_id": new_rec.id, "content": ai_content}
+    
+    except Exception as e:
+        # Fallback mock response when API key has no credits
+        is_nutrition = "питани" in req.query.lower() or "есть" in req.query.lower() or "nutrition" in req.query.lower() or "eat" in req.query.lower()
+        
+        if is_nutrition:
+            mock_content = f"""
+🥗 **AI Nutrition Recommendation** (Demo Mode)
+
+Based on your request: "{req.query}"
+
+**Post-Workout Nutrition for Muscle Gain:**
+
+1. **Protein Shake** (within 30 min):
+   - 25-30g whey protein
+   - Mixed with water or milk
+
+2. **Full Meal** (1-2 hours after):
+   - Chicken breast or fish (150-200g)
+   - Rice or sweet potato (100g)
+   - Vegetables (broccoli, spinach)
+
+3. **Key Nutrients:**
+   - Protein: 25-40g
+   - Carbs: 40-60g (to replenish glycogen)
+   - Fats: Keep low immediately post-workout
+
+**Tips:**
+- Eat within 2 hours after training
+- Stay hydrated (500ml water minimum)
+- Consider creatine 5g daily
+
+*Note: This is a demo response. Add credits to your OpenAI account for real AI-generated plans.*
+"""
+        else:
+            mock_content = f"""
+🏋️ **AI Coach Recommendation** (Demo Mode)
+
+Based on your request: "{req.query}"
+
+**Workout Plan for Beginner:**
+1. Warm-up: 5-10 min light cardio
+2. Push-ups: 3 sets x 10-15 reps
+3. Dumbbell Bench Press: 3 sets x 12 reps
+4. Incline Dumbbell Press: 3 sets x 10 reps
+5. Chest Flyes: 3 sets x 12 reps
+6. Cool-down stretching
+
+**Tips:**
+- Rest 60-90 seconds between sets
+- Focus on proper form over weight
+- Train chest 2x per week with 48h rest between sessions
+
+*Note: This is a demo response. Add credits to your OpenAI account for real AI-generated plans.*
+"""
+        
+        rec_type = "nutrition_advice_demo" if is_nutrition else "workout_plan_demo"
+        new_rec = AIRecommendation(
+            user_id=user_id,
+            recommendation_type=rec_type,
+            content=mock_content,
+            confidence_score=0.75,
+            is_approved=True
+        )
+        db.add(new_rec)
+        db.commit()
+        db.refresh(new_rec)
+        
+        return {"status": "success (demo mode)", "recommendation_id": new_rec.id, "content": mock_content, "note": "OpenAI API quota exceeded - using mock response"}
 
 @app.get("/stats/{user_id}")
 def get_user_stats(user_id: int, db: Session = Depends(get_db)):

@@ -1,75 +1,43 @@
-# Documentation and notes
-*.md
-*.txt
-*.rst
-*.org
+# Database
+*.db
 
-# Logs and temporary files
-*.log
-*.tmp
-*.temp
-*.lock
-
-# Environment and configuration
+# Environment
 .env
 .env.local
 .env.*
-config/
 
-# OS generated files
-.DS_Store
-Thumbs.db
-desktop.ini
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# IDE specific files
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Build and distribution artifacts
-dist/
-build/
-target/
-out/
-bin/
-lib/
+# Logs
+*.log
 
-# Dependencies
-node_modules/
-vendor/
-*.egg-info/
-.Python
-*.pyc
-__pycache__/
-
-# Test and coverage
+# Coverage
 .coverage
 coverage/
 htmlcov/
-.test*
-*.test
 
-# Compression and archives
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.mypy_cache/
