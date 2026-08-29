@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IronTrack</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 20px; color: var(--tg-theme-button-color, #3390ec); }
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .btn {
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+        }
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+        }
+        .hidden { display: none; }
+        .stat { font-size: 18px; font-weight: bold; margin: 8px 0; }
+        .list-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--tg-theme-hint-color, #eee);
+        }
+        .list-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏋️ IronTrack</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('workout')">Workout</div>
+            <div class="tab" onclick="showTab('nutrition')">Nutrition</div>
+            <div class="tab" onclick="showTab('ai')">AI Coach</div>
+        </div>
+
+        <!-- Workout Tab -->
+        <div id="workout-tab">
+            <div class="card">
+                <h2>Add Workout</h2>
+                <input type="text" id="exercise" class="input" placeholder="Exercise (e.g., Bench Press)">
+                <input type="number" id="sets" class="input" placeholder="Sets">
+                <input type="number" id="reps" class="input" placeholder="Reps">
+                <input type="number" id="weight" class="input" placeholder="Weight (kg)">
+                <input type="text" id="notes" class="input" placeholder="Notes (optional)">
+                <button class="btn" onclick="addWorkout()">Save Workout</button>
+            </div>
+            <div class="card">
+                <h2>Recent Workouts</h2>
+                <div id="workout-list"></div>
+            </div>
+        </div>
+
+        <!-- Nutrition Tab -->
+        <div id="nutrition-tab" class="hidden">
+            <div class="card">
+                <h2>Add Meal</h2>
+                <input type="text" id="food" class="input" placeholder="Food (e.g., Chicken Breast)">
+                <input type="number" id="calories" class="input" placeholder="Calories">
+                <input type="number" id="protein" class="input" placeholder="Protein (g)">
+                <input type="number" id="carbs" class="input" placeholder="Carbs (g)">
+                <input type="number" id="fat" class="input" placeholder="Fat (g)">
+                <button class="btn" onclick="addMeal()">Save Meal</button>
+            </div>
+            <div class="card">
+                <h2>Today's Meals</h2>
+                <div id="meal-list"></div>
+            </div>
+        </div>
+
+        <!-- AI Tab -->
+        <div id="ai-tab" class="hidden">
+            <div class="card">
+                <h2>AI Coach</h2>
+                <p style="margin-bottom: 10px;">Get personalized recommendations:</p>
+                <button class="btn" onclick="getWorkoutAdvice()">💪 Workout Advice</button>
+                <button class="btn" onclick="getNutritionAdvice()">🥗 Nutrition Advice</button>
+                <div id="ai-response" class="card" style="margin-top: 16px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const API_URL = 'http://localhost:8000'; // Will be updated with actual backend URL
+        let userId = 1; // Placeholder - will get from Telegram auth
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id$="-tab"]').forEach(t => t.classList.add('hidden'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+        }
+
+        async function addWorkout() {
+            const workout = {
+                user_id: userId,
+                exercise: document.getElementById('exercise').value,
+                sets: parseInt(document.getElementById('sets').value),
+                reps: parseInt(document.getElementById('reps').value),
+                weight: parseFloat(document.getElementById('weight').value),
+                notes: document.getElementById('notes').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/workouts/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(workout)
+                });
+                const result = await response.json();
+                alert('Workout saved!');
+                loadWorkouts();
+            } catch (error) {
+                alert('Error saving workout');
+            }
+        }
+
+        async function loadWorkouts() {
+            try {
+                const response = await fetch(`${API_URL}/workouts/${userId}`);
+                const workouts = await response.json();
+                const list = document.getElementById('workout-list');
+                list.innerHTML = workouts.map(w => 
+                    `<div class="list-item"><strong>${w.exercise}</strong><br>${w.sets}x${w.reps} @ ${w.weight}kg</div>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading workouts');
+            }
+        }
+
+        async function addMeal() {
+            const meal = {
+                user_id: userId,
+                food: document.getElementById('food').value,
+                calories: parseInt(document.getElementById('calories').value),
+                protein: parseFloat(document.getElementById('protein').value),
+                carbs: parseFloat(document.getElementById('carbs').value),
+                fat: parseFloat(document.getElementById('fat').value)
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/meals/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(meal)
+                });
+                const result = await response.json();
+                alert('Meal saved!');
+                loadMeals();
+            } catch (error) {
+                alert('Error saving meal');
+            }
+        }
+
+        async function loadMeals() {
+            try {
+                const response = await fetch(`${API_URL}/meals/${userId}`);
+                const meals = await response.json();
+                const list = document.getElementById('meal-list');
+                list.innerHTML = meals.map(m => 
+                    `<div class="list-item"><strong>${m.food}</strong><br>${m.calories} kcal | P:${m.protein}g C:${m.carbs}g F:${m.fat}g</div>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading meals');
+            }
+        }
+
+        async function getWorkoutAdvice() {
+            document.getElementById('ai-response').style.display = 'block';
+            document.getElementById('ai-response').innerHTML = 'Generating advice...';
+            
+            try {
+                const response = await fetch(`${API_URL}/ai/recommend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, request_type: 'workout', data: {} })
+                });
+                const result = await response.json();
+                document.getElementById('ai-response').innerHTML = `<strong>💪 ${result.recommendation}</strong>`;
+            } catch (error) {
+                document.getElementById('ai-response').innerHTML = 'Error getting advice';
+            }
+        }
+
+        async function getNutritionAdvice() {
+            document.getElementById('ai-response').style.display = 'block';
+            document.getElementById('ai-response').innerHTML = 'Generating advice...';
+            
+            try {
+                const response = await fetch(`${API_URL}/ai/recommend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, request_type: 'nutrition', data: {} })
+                });
+                const result = await response.json();
+                document.getElementById('ai-response').innerHTML = `<strong>🥗 ${result.recommendation}</strong>`;
+            } catch (error) {
+                document.getElementById('ai-response').innerHTML = 'Error getting advice';
+            }
+        }
+
+        // Load data on start
+        loadWorkouts();
+        loadMeals();
+    </script>
+</body>
+</html>
