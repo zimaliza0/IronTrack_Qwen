@@ -1,251 +1,1815 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IronTrack</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            padding: 16px;
-        }
-        .container { max-width: 600px; margin: 0 auto; }
-        h1 { font-size: 24px; margin-bottom: 20px; color: var(--tg-theme-button-color, #3390ec); }
-        .card {
-            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-        .btn {
-            background: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-        }
-        .input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--tg-theme-hint-color, #ccc);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-        }
-        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-        .tab {
-            flex: 1;
-            padding: 10px;
-            text-align: center;
-            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .tab.active {
-            background: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #fff);
-        }
-        .hidden { display: none; }
-        .stat { font-size: 18px; font-weight: bold; margin: 8px 0; }
-        .list-item {
-            padding: 12px;
-            border-bottom: 1px solid var(--tg-theme-hint-color, #eee);
-        }
-        .list-item:last-child { border-bottom: none; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0a0a" />
+<title>Coach — Training Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.css" />
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1c;
+    --surface-3: #262626;
+    --border: #2a2a2a;
+    --border-2: #333;
+    --text: #f5f5f5;
+    --text-dim: #a3a3a3;
+    --text-mute: #6b6b6b;
+    --accent: #e11d48;
+    --accent-soft: rgba(225, 29, 72, 0.12);
+    --green: #22c55e;
+    --yellow: #eab308;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+  }
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #000;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  .app-shell {
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  .screen { display: none; padding-bottom: 100px; }
+  .screen.active { display: block; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .safe-top { padding-top: env(safe-area-inset-top, 12px); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    padding: 10px 4px;
+    color: var(--text-mute);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: color .2s;
+    cursor: pointer;
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-item svg { width: 22px; height: 22px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .card-flat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    width: 100%;
+    cursor: pointer;
+    transition: transform .1s, opacity .2s;
+  }
+  .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+  .btn-ghost {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-ghost:active { background: var(--surface-3); }
+
+  .rir-chip {
+    flex: 1;
+    padding: 14px 0;
+    text-align: center;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .rir-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .rir-chip:active { transform: scale(0.96); }
+
+  .w-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .w-btn.minus { color: #f87171; }
+  .w-btn.plus { color: #4ade80; }
+  .w-btn:active { background: var(--surface-3); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .pill-green { background: rgba(34,197,94,0.12); color: #4ade80; }
+  .pill-yellow { background: rgba(234,179,8,0.12); color: #facc15; }
+  .pill-red { background: var(--accent-soft); color: #fb7185; }
+  .pill-blue { background: rgba(59,130,246,0.12); color: #60a5fa; }
+  .pill-purple { background: rgba(139,92,246,0.12); color: #a78bfa; }
+  .pill-gray { background: var(--surface-2); color: var(--text-dim); }
+
+  .input {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    width: 100%;
+    font-family: inherit;
+  }
+  .input:focus { outline: none; border-color: var(--accent); }
+
+  .bubble-user {
+    background: var(--accent);
+    color: white;
+    border-radius: 18px 18px 4px 18px;
+    padding: 10px 14px;
+    max-width: 80%;
+    margin-left: auto;
+    font-size: 14px;
+  }
+  .bubble-ai {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 18px 18px 18px 4px;
+    padding: 12px 14px;
+    max-width: 88%;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .progress {
+    height: 6px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #f43f5e);
+    border-radius: 999px;
+  }
+
+  .ex-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .ex-card.current {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 24px -12px rgba(225,29,72,0.5);
+  }
+  .ex-card.done { opacity: 0.55; }
+
+  .set-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .set-row:first-of-type { border-top: none; }
+  .set-row .num { color: var(--text-mute); font-weight: 600; font-size: 12px; }
+  .set-row .val { font-weight: 600; }
+  .set-row.done .val { color: var(--green); }
+  .set-row.active { background: var(--accent-soft); border-radius: 8px; padding: 8px; margin: 2px -8px; }
+
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    gap: 3px;
+  }
+  .cal-day.today { background: var(--surface-2); color: var(--text); }
+  .cal-day.has-workout::after {
+    content: '';
+    width: 5px; height: 5px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+  .cal-day.done::after { background: var(--green); }
+  .cal-day.selected { background: var(--accent); color: white; }
+  .cal-day.selected::after { background: white; }
+  .cal-day.muted { color: var(--text-mute); }
+
+  .mode-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+  }
+  .mode-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .conf-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .conf-bar { flex: 1; height: 4px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+  .conf-bar > div { height: 100%; background: var(--green); border-radius: 999px; }
+
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot-green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot-yellow { background: var(--yellow); }
+  .dot-red { background: var(--accent); }
+  .dot-purple { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+
+  .hdr {
+    padding: 16px 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .hdr h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .hdr-sub { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+  .toggle {
+    width: 44px; height: 26px;
+    background: var(--surface-3);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 20px; height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform .2s;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; animation: fadeIn .2s; }
+  .modal-sheet {
+    width: 100%;
+    max-width: 430px;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 30px;
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUp .3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: var(--border-2);
+    border-radius: 999px;
+    margin: 0 auto 16px;
+  }
+
+  .sync-indicator {
+    position: fixed;
+    top: env(safe-area-inset-top, 12px);
+    left: 50%; transform: translateX(-50%);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex; align-items: center; gap: 6px;
+    z-index: 40;
+    margin-top: 8px;
+  }
+  .sync-indicator .dot { width: 6px; height: 6px; }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 20px 20px 10px;
+  }
+
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #374151, #1f2937);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .avatar.lg { width: 72px; height: 72px; font-size: 24px; }
+
+  .test-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .test-item.pass { border-left: 3px solid var(--green); }
+  .test-item.fail { border-left: 3px solid var(--accent); }
+  .test-item.warn { border-left: 3px solid var(--yellow); }
+
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .agent-card.active {
+    border-color: var(--purple);
+    background: rgba(139,92,246,0.05);
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>🏋️ IronTrack</h1>
-        
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('workout')">Workout</div>
-            <div class="tab" onclick="showTab('nutrition')">Nutrition</div>
-            <div class="tab" onclick="showTab('ai')">AI Coach</div>
-        </div>
 
-        <!-- Workout Tab -->
-        <div id="workout-tab">
-            <div class="card">
-                <h2>Add Workout</h2>
-                <input type="text" id="exercise" class="input" placeholder="Exercise (e.g., Bench Press)">
-                <input type="number" id="sets" class="input" placeholder="Sets">
-                <input type="number" id="reps" class="input" placeholder="Reps">
-                <input type="number" id="weight" class="input" placeholder="Weight (kg)">
-                <input type="text" id="notes" class="input" placeholder="Notes (optional)">
-                <button class="btn" onclick="addWorkout()">Save Workout</button>
-            </div>
-            <div class="card">
-                <h2>Recent Workouts</h2>
-                <div id="workout-list"></div>
-            </div>
-        </div>
+<div class="app-shell">
 
-        <!-- Nutrition Tab -->
-        <div id="nutrition-tab" class="hidden">
-            <div class="card">
-                <h2>Add Meal</h2>
-                <input type="text" id="food" class="input" placeholder="Food (e.g., Chicken Breast)">
-                <input type="number" id="calories" class="input" placeholder="Calories">
-                <input type="number" id="protein" class="input" placeholder="Protein (g)">
-                <input type="number" id="carbs" class="input" placeholder="Carbs (g)">
-                <input type="number" id="fat" class="input" placeholder="Fat (g)">
-                <button class="btn" onclick="addMeal()">Save Meal</button>
-            </div>
-            <div class="card">
-                <h2>Today's Meals</h2>
-                <div id="meal-list"></div>
-            </div>
-        </div>
+  <div class="sync-indicator" id="syncIndicator">
+    <span class="dot dot-green"></span>
+    <span>Синхронизировано</span>
+  </div>
 
-        <!-- AI Tab -->
-        <div id="ai-tab" class="hidden">
-            <div class="card">
-                <h2>AI Coach</h2>
-                <p style="margin-bottom: 10px;">Get personalized recommendations:</p>
-                <button class="btn" onclick="getWorkoutAdvice()">💪 Workout Advice</button>
-                <button class="btn" onclick="getNutritionAdvice()">🥗 Nutrition Advice</button>
-                <div id="ai-response" class="card" style="margin-top: 16px; display: none;"></div>
-            </div>
-        </div>
+  <section class="screen active" id="screen-dashboard">
+    <div class="safe-top"></div>
+    <div class="hdr">
+      <div>
+        <div style="font-size:12px;color:var(--text-mute);font-weight:500;">Суббота, 29 августа</div>
+        <h1>Клиенты</h1>
+      </div>
+      <button class="btn-ghost" style="padding:10px;" onclick="openModal('addClientModal')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
     </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+    <div style="padding:0 20px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <div class="card" style="padding:12px;">
+          <div style="font-size:11px;color:var(--text-mute);font-weight:500;">АКТИВНЫХ</div>
+          <div style="font-size:22px;font-weight:700;margin-top:4px;">7</div>
+        </div>
+        <div class="card" style="padding:12px;">
+          <div style="font-size:11px;color:var(--text-mute);font-weight:500;">СЕГОДНЯ</div>
+          <div style="font-size:22px;font-weight:700;margin-top:4px;color:var(--accent);">3</div>
+        </div>
+        <div class="card" style="padding:12px;">
+          <div style="font-size:11px;color:var(--text-mute);font-weight:500;">АLERTS</div>
+          <div style="font-size:22px;font-weight:700;margin-top:4px;color:var(--yellow);">2</div>
+        </div>
+      </div>
+    </div>
 
-        const API_URL = 'http://localhost:8000'; // Will be updated with actual backend URL
-        let userId = 1; // Placeholder - will get from Telegram auth
+    <div style="padding:16px 20px 8px;">
+      <div style="position:relative;">
+        <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-mute);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="input" style="padding-left:42px;" placeholder="Имя, username, цель..." />
+      </div>
+    </div>
 
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('[id$="-tab"]').forEach(t => t.classList.add('hidden'));
+    <div style="padding:8px 20px;display:flex;gap:8px;overflow-x:auto;" class="no-scrollbar">
+      <button class="btn-ghost" style="padding:8px 14px;font-size:12px;background:var(--accent);color:white;border-color:var(--accent);">Все · 7</button>
+      <button class="btn-ghost" style="padding:8px 14px;font-size:12px;">Сегодня · 3</button>
+      <button class="btn-ghost" style="padding:8px 14px;font-size:12px;">Сушка · 2</button>
+      <button class="btn-ghost" style="padding:8px 14px;font-size:12px;">Масса · 3</button>
+      <button class="btn-ghost" style="padding:8px 14px;font-size:12px;">Alerts · 2</button>
+    </div>
+
+    <div style="padding:8px 20px;">
+      <div class="card-flat" style="padding:14px;margin-bottom:10px;cursor:pointer;" onclick="openClient('ivan')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar" style="background:linear-gradient(135deg,#e11d48,#9f1239);">ИП</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-weight:600;font-size:15px;">Иван Петров</div>
+              <span class="dot dot-green"></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">@ivan_p · Сушка · Мезоцикл 2</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-mute);">След. тренировка</div>
+            <div style="font-size:13px;font-weight:600;">Сегодня, 19:00</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <span class="pill pill-red">⚠ Пропуск веса 3 дня</span>
+          <span class="pill pill-gray">Adherence 92%</span>
+        </div>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:10px;cursor:pointer;" onclick="openClient('maria')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">МС</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-weight:600;font-size:15px;">Мария Смирнова</div>
+              <span class="dot dot-green"></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">@maria_s · Набор · Мезоцикл 1</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-mute);">Выполнила</div>
+            <div style="font-size:13px;font-weight:600;color:var(--green);">2ч назад</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <span class="pill pill-green">✓ e1RM +3.2%</span>
+          <span class="pill pill-gray">Adherence 96%</span>
+        </div>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:10px;cursor:pointer;" onclick="openClient('alex')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">АС</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-weight:600;font-size:15px;">Алексей Соколов</div>
+              <span class="dot dot-yellow"></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">@alex_sok · Сила · Мезоцикл 3</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-mute);">След. тренировка</div>
+            <div style="font-size:13px;font-weight:600;">Завтра, 08:00</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <span class="pill pill-yellow">⚡ RIR 0 × 4 за неделю</span>
+        </div>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:10px;cursor:pointer;" onclick="openClient('elena')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar" style="background:linear-gradient(135deg,#10b981,#047857);">ЕК</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-weight:600;font-size:15px;">Елена Козлова</div>
+              <span class="dot dot-green"></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">@elena_k · Здоровье · Мезоцикл 1</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-mute);">След. тренировка</div>
+            <div style="font-size:13px;font-weight:600;">Пн, 10:00</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <span class="pill pill-green">✓ Сон 7.5ч</span>
+          <span class="pill pill-gray">Adherence 88%</span>
+        </div>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:10px;cursor:pointer;" onclick="openClient('dmitry')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar" style="background:linear-gradient(135deg,#f59e0b,#b45309);">ДМ</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-weight:600;font-size:15px;">Дмитрий Морозов</div>
+              <span class="dot dot-green"></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">@d_moroz · Сушка · Мезоцикл 2</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-mute);">Сегодня</div>
+            <div style="font-size:13px;font-weight:600;">20:30</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-client">
+    <div class="safe-top"></div>
+    <div class="hdr">
+      <button class="btn-ghost" style="padding:8px 12px;" onclick="showScreen('dashboard')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div style="flex:1;text-align:center;">
+        <div style="font-size:12px;color:var(--text-mute);">Клиент</div>
+      </div>
+      <button class="btn-ghost" style="padding:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      </button>
+    </div>
+
+    <div style="padding:0 20px;">
+      <div class="card" style="text-align:center;padding:20px;">
+        <div class="avatar lg" style="margin:0 auto 12px;background:linear-gradient(135deg,#e11d48,#9f1239);">ИП</div>
+        <div style="font-size:20px;font-weight:700;">Иван Петров</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px;">@ivan_p · 28 лет · 182 см</div>
+        <div style="display:flex;gap:6px;justify-content:center;margin-top:12px;">
+          <span class="pill pill-green"><span class="dot dot-green" style="width:6px;height:6px;"></span> Активный</span>
+          <span class="pill pill-red">Сушка</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
+        <div class="card" style="padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;">ВЕС</div>
+          <div style="font-size:18px;font-weight:700;margin-top:4px;">82.4</div>
+          <div style="font-size:11px;color:var(--green);font-weight:600;">−0.6%</div>
+        </div>
+        <div class="card" style="padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;">ЦЕЛЬ</div>
+          <div style="font-size:18px;font-weight:700;margin-top:4px;">78.0</div>
+          <div style="font-size:11px;color:var(--text-dim);">−4.4 кг</div>
+        </div>
+        <div class="card" style="padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;">e1RM ЖИМ</div>
+          <div style="font-size:18px;font-weight:700;margin-top:4px;">98.5</div>
+          <div style="font-size:11px;color:var(--green);font-weight:600;">+2.8%</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:16px 20px 0;">
+      <div style="display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;">
+        <button class="client-tab active" data-tab="overview" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;background:var(--accent);color:white;border:none;cursor:pointer;">Обзор</button>
+        <button class="client-tab" data-tab="program" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;background:transparent;color:var(--text-dim);border:none;cursor:pointer;">Программа</button>
+        <button class="client-tab" data-tab="analytics" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;background:transparent;color:var(--text-dim);border:none;cursor:pointer;">Аналитика</button>
+      </div>
+    </div>
+
+    <div class="client-content" data-content="overview">
+      <div style="padding:12px 20px 0;">
+        <div class="card" style="background:linear-gradient(135deg,rgba(225,29,72,0.08),rgba(225,29,72,0.02));border-color:rgba(225,29,72,0.2);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:24px;height:24px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </div>
+            <div style="font-size:13px;font-weight:600;">AI-инсайт · Training Agent</div>
+            <span class="pill pill-gray" style="margin-left:auto;font-size:10px;">87% conf.</span>
+          </div>
+          <div style="font-size:13px;line-height:1.5;color:var(--text);">
+            Вес снижается стабильно (−0.5%/нед), но e1RM в жиме просел на 1.2% за 2 недели. Возможная причина — дефицит + высокий объём. Предлагаю снизить объём жима на 1 подход и пересмотреть КБЖУ.
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn-ghost" style="flex:1;padding:10px;font-size:13px;background:var(--accent);color:white;border-color:var(--accent);" onclick="applyAIRecommendation()">Применить</button>
+            <button class="btn-ghost" style="flex:1;padding:10px;font-size:13px;" onclick="showAIDetails()">Подробнее</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Цели · Мезоцикл 2</div>
+      <div style="padding:0 20px;">
+        <div class="card" style="padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:14px;font-weight:600;">Снижение массы</div>
+            <span class="pill pill-green">В графике</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">86.8 → 82.4 кг · цель 78.0 кг</div>
+          <div class="progress"><div style="width:72%;"></div></div>
+          <div style="font-size:11px;color:var(--text-mute);margin-top:6px;">Темп: −0.5%/нед · норма 0.4–0.6%</div>
+        </div>
+
+        <div class="card" style="padding:14px;margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:14px;font-weight:600;">Сохранение силы</div>
+            <span class="pill pill-yellow">Внимание</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">e1RM жим: 101.3 → 98.5 кг · допустимо −3%</div>
+          <div class="progress"><div style="width:45%;background:linear-gradient(90deg,#eab308,#f59e0b);"></div></div>
+        </div>
+      </div>
+
+      <div class="section-title">Последние тренировки</div>
+      <div style="padding:0 20px 20px;">
+        <div class="card-flat" style="padding:12px;margin-bottom:8px;cursor:pointer;" onclick="openWorkout()">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M6.5 17.5 17.5 6.5" stroke="none"/><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;">Push · День A</div>
+              <div style="font-size:12px;color:var(--text-dim);">Вчера · 58 мин · 6 упражнений</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:600;color:var(--green);">✓</div>
+              <div style="font-size:11px;color:var(--text-mute);">100%</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:600;">Pull · День B</div>
+              <div style="font-size:12px;color:var(--text-dim);">2 дня назад · 64 мин · 7 упражнений</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:600;color:var(--green);">✓</div>
+              <div style="font-size:11px;color:var(--text-mute);">95%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="client-content" data-content="program" style="display:none;">
+      <div style="padding:12px 20px;">
+        <div class="card" style="padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:start;">
+            <div>
+              <div style="font-size:11px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;">МЕЗОЦИКЛ 2 / 3</div>
+              <div style="font-size:17px;font-weight:700;margin-top:4px;">Сушка · Гипертрофия</div>
+              <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">6 недель · 4 тренировки/нед</div>
+            </div>
+            <span class="pill pill-green">Активен</span>
+          </div>
+          <div class="progress" style="margin-top:14px;"><div style="width:66%;"></div></div>
+          <div style="font-size:11px;color:var(--text-mute);margin-top:6px;">Неделя 4 из 6 · осталось 14 дней</div>
+        </div>
+      </div>
+
+      <div class="section-title">Текущая неделя</div>
+      <div style="padding:0 20px;">
+        <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:14px;font-weight:600;">Пн · Push A</div>
+              <div style="font-size:12px;color:var(--text-dim);">Жим, жим наклон, махи, трицепс</div>
+            </div>
+            <span class="pill pill-green">✓</span>
+          </div>
+        </div>
+        <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:14px;font-weight:600;">Вт · Pull B</div>
+              <div style="font-size:12px;color:var(--text-dim);">Тяга, подтягивания, бицепс</div>
+            </div>
+            <span class="pill pill-green">✓</span>
+          </div>
+        </div>
+        <div class="card-flat" style="padding:12px;margin-bottom:8px;border-color:var(--accent);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--accent);">Ср · Legs C · Сегодня</div>
+              <div style="font-size:12px;color:var(--text-dim);">Присед, жим ногами, икры</div>
+            </div>
+            <span class="pill pill-red">19:00</span>
+          </div>
+        </div>
+        <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:14px;font-weight:600;">Пт · Upper D</div>
+              <div style="font-size:12px;color:var(--text-dim);">Жим стоя, тяга в наклоне</div>
+            </div>
+            <span class="pill pill-gray">Завтра</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:16px 20px;">
+        <button class="btn-primary" onclick="openWorkout()">Начать тренировку</button>
+      </div>
+    </div>
+
+    <div class="client-content" data-content="analytics" style="display:none;">
+      <div style="padding:12px 20px;">
+        <div class="card" style="padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div>
+              <div style="font-size:11px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;">E1RM · ЖИМ ЛЁЖА</div>
+              <div style="font-size:22px;font-weight:700;margin-top:4px;">98.5 кг</div>
+            </div>
+            <span class="pill pill-green">+2.8%</span>
+          </div>
+          <div style="height:140px;"><canvas id="e1rmChart"></canvas></div>
+        </div>
+
+        <div class="card" style="padding:14px;margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div>
+              <div style="font-size:11px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;">ВЕС · 14 ДНЕЙ</div>
+              <div style="font-size:22px;font-weight:700;margin-top:4px;">82.4 кг</div>
+            </div>
+            <span class="pill pill-green">−0.6%</span>
+          </div>
+          <div style="height:140px;"><canvas id="weightChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-workout">
+    <div class="safe-top" style="background:var(--bg);"></div>
+    <div style="padding:12px 20px;display:flex;align-items:center;gap:12px;background:var(--bg);position:sticky;top:0;z-index:10;">
+      <button class="btn-ghost" style="padding:8px;" onclick="showScreen('client')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div style="flex:1;">
+        <div style="font-size:11px;color:var(--text-mute);font-weight:500;">Иван Петров · Legs C</div>
+        <div style="font-size:15px;font-weight:700;">Тренировка</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;" id="workoutTimer">32:14</div>
+        <div style="font-size:10px;color:var(--text-mute);">3/6 упражнений</div>
+      </div>
+    </div>
+
+    <div style="padding:0 20px 12px;">
+      <div class="progress"><div style="width:50%;"></div></div>
+    </div>
+
+    <div style="padding:0 20px;">
+
+      <div class="ex-card done">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">УПРАЖНЕНИЕ 1 · ЗАВЕРШЕНО</div>
+            <div style="font-size:16px;font-weight:700;margin-top:2px;">Присед со штангой</div>
+          </div>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <div class="set-row">
+          <div class="num">1</div>
+          <div class="val">100 × 8</div>
+          <div class="val" style="color:var(--text-dim);">RIR 3</div>
+          <div style="color:var(--green);font-size:12px;">✓ разминка</div>
+        </div>
+        <div class="set-row done">
+          <div class="num">2</div>
+          <div class="val">120 × 6</div>
+          <div class="val">RIR 2</div>
+          <div style="color:var(--green);font-size:12px;">✓</div>
+        </div>
+        <div class="set-row done">
+          <div class="num">3</div>
+          <div class="val">130 × 5</div>
+          <div class="val">RIR 2</div>
+          <div style="color:var(--green);font-size:12px;">✓</div>
+        </div>
+        <div class="set-row done">
+          <div class="num">4</div>
+          <div class="val">130 × 5</div>
+          <div class="val">RIR 1</div>
+          <div style="color:var(--green);font-size:12px;">✓</div>
+        </div>
+      </div>
+
+      <div class="ex-card current">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+          <div>
+            <div style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:0.05em;">УПРАЖНЕНИЕ 2 · ТЕКУЩЕЕ</div>
+            <div style="font-size:17px;font-weight:700;margin-top:2px;">Жим ногами</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">План: 4 × 8–10 @ RIR 2</div>
+          </div>
+          <button class="btn-ghost" style="padding:6px 10px;font-size:11px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </button>
+        </div>
+
+        <div class="set-row done">
+          <div class="num">1</div>
+          <div class="val">180 × 10</div>
+          <div class="val">RIR 2</div>
+          <div style="color:var(--green);font-size:12px;">✓</div>
+        </div>
+        <div class="set-row done">
+          <div class="num">2</div>
+          <div class="val">200 × 9</div>
+          <div class="val">RIR 2</div>
+          <div style="color:var(--green);font-size:12px;">✓</div>
+        </div>
+        <div class="set-row active">
+          <div class="num" style="color:var(--accent);">3</div>
+          <div class="val" style="color:var(--accent);">210 × <span id="currentReps">—</span></div>
+          <div class="val" style="color:var(--accent);" id="currentRIR">RIR —</div>
+          <div style="color:var(--text-mute);font-size:11px;">план 8–10</div>
+        </div>
+        <div class="set-row">
+          <div class="num">4</div>
+          <div class="val" style="color:var(--text-dim);">210 × 8–10</div>
+          <div class="val" style="color:var(--text-dim);">RIR 2</div>
+          <div></div>
+        </div>
+
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">ВЕС · КГ</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="w-btn minus" onclick="adjustWeight(-2.5)">−2.5</button>
+            <button class="w-btn minus" onclick="adjustWeight(-1.25)">−1.25</button>
+            <div style="flex:1;text-align:center;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;" id="weightDisplay">210.0</div>
+            <button class="w-btn plus" onclick="adjustWeight(1.25)">+1.25</button>
+            <button class="w-btn plus" onclick="adjustWeight(2.5)">+2.5</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="font-size:11px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">ПОВТОРЫ</div>
+          <div style="display:flex;gap:6px;">
+            <button class="w-btn" style="flex:1;" onclick="setReps(6)">6</button>
+            <button class="w-btn" style="flex:1;" onclick="setReps(7)">7</button>
+            <button class="w-btn" style="flex:1;" onclick="setReps(8)">8</button>
+            <button class="w-btn" style="flex:1;background:var(--accent-soft);border-color:var(--accent);color:var(--accent);" onclick="setReps(9)">9</button>
+            <button class="w-btn" style="flex:1;" onclick="setReps(10)">10</button>
+            <button class="w-btn" style="flex:1;" onclick="setReps(11)">11</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="font-size:11px;color:var(--text-mute);font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">RIR · В БАЗЕ</div>
+          <div style="display:flex;gap:6px;">
+            <button class="rir-chip" onclick="setRIR(this,0)">0</button>
+            <button class="rir-chip" onclick="setRIR(this,1)">1</button>
+            <button class="rir-chip active" onclick="setRIR(this,2)">2</button>
+            <button class="rir-chip" onclick="setRIR(this,3)">3</button>
+            <button class="rir-chip" onclick="setRIR(this,4)">4</button>
+            <button class="rir-chip" onclick="setRIR(this,'5+')">5+</button>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:16px;" onclick="completeSet()">Завершить подход</button>
+      </div>
+
+      <div class="ex-card">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">УПРАЖНЕНИЕ 3</div>
+            <div style="font-size:16px;font-weight:700;margin-top:2px;">Разгибания ног</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">3 × 12–15 @ RIR 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">УПРАЖНЕНИЕ 4</div>
+            <div style="font-size:16px;font-weight:700;margin-top:2px;">Сгибания ног лёжа</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">3 × 10–12 @ RIR 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">УПРАЖНЕНИЕ 5</div>
+            <div style="font-size:16px;font-weight:700;margin-top:2px;">Подъём на носки</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">4 × 12–15 @ RIR 1</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-card" style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">УПРАЖНЕНИЕ 6</div>
+            <div style="font-size:16px;font-weight:700;margin-top:2px;">Планка</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">3 × 45 сек</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-calendar">
+    <div class="safe-top"></div>
+    <div class="hdr">
+      <div>
+        <h1>Август 2026</h1>
+        <div class="hdr-sub">4 тренировки запланировано</div>
+      </div>
+      <button class="btn-ghost" style="padding:10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </button>
+    </div>
+
+    <div style="padding:0 20px;">
+      <div class="card" style="padding:14px;">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin-bottom:8px;">
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">ПН</div>
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">ВТ</div>
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">СР</div>
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">ЧТ</div>
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">ПТ</div>
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">СБ</div>
+          <div style="font-size:10px;color:var(--text-mute);font-weight:600;">ВС</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">
+          <div class="cal-day muted"></div>
+          <div class="cal-day muted"></div>
+          <div class="cal-day muted"></div>
+          <div class="cal-day muted"></div>
+          <div class="cal-day muted"></div>
+          <div class="cal-day has-workout">1</div>
+          <div class="cal-day">2</div>
+          <div class="cal-day has-workout done">3</div>
+          <div class="cal-day has-workout done">4</div>
+          <div class="cal-day has-workout done">5</div>
+          <div class="cal-day">6</div>
+          <div class="cal-day has-workout done">7</div>
+          <div class="cal-day has-workout done">8</div>
+          <div class="cal-day">9</div>
+          <div class="cal-day has-workout done">10</div>
+          <div class="cal-day has-workout done">11</div>
+          <div class="cal-day has-workout done">12</div>
+          <div class="cal-day">13</div>
+          <div class="cal-day has-workout done">14</div>
+          <div class="cal-day has-workout done">15</div>
+          <div class="cal-day">16</div>
+          <div class="cal-day has-workout done">17</div>
+          <div class="cal-day has-workout done">18</div>
+          <div class="cal-day has-workout done">19</div>
+          <div class="cal-day">20</div>
+          <div class="cal-day has-workout done">21</div>
+          <div class="cal-day has-workout done">22</div>
+          <div class="cal-day">23</div>
+          <div class="cal-day has-workout done">24</div>
+          <div class="cal-day has-workout done">25</div>
+          <div class="cal-day has-workout done">26</div>
+          <div class="cal-day">27</div>
+          <div class="cal-day has-workout done">28</div>
+          <div class="cal-day has-workout today selected">29</div>
+          <div class="cal-day">30</div>
+          <div class="cal-day has-workout">31</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Сегодня · 29 августа</div>
+    <div style="padding:0 20px;">
+      <div class="card-flat" style="padding:12px;margin-bottom:8px;border-color:var(--accent);">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">19:00</div>
+          </div>
+          <div style="width:3px;background:var(--accent);height:36px;border-radius:2px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:600;">Иван · Legs C</div>
+            <div style="font-size:12px;color:var(--text-dim);">Присед, жим ногами, разгибания</div>
+          </div>
+          <button class="btn-ghost" style="padding:8px 12px;font-size:12px;background:var(--accent);color:white;border-color:var(--accent);" onclick="openWorkout()">Старт</button>
+        </div>
+      </div>
+
+      <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">20:30</div>
+          </div>
+          <div style="width:3px;background:var(--border-2);height:36px;border-radius:2px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:600;">Дмитрий · Push A</div>
+            <div style="font-size:12px;color:var(--text-dim);">Жим, наклон, махи, трицепс</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Завтра · 30 августа</div>
+    <div style="padding:0 20px 20px;">
+      <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">08:00</div>
+          </div>
+          <div style="width:3px;background:var(--border-2);height:36px;border-radius:2px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:600;">Алексей · Deadlift</div>
+            <div style="font-size:12px;color:var(--text-dim);">Тяга, тяга в наклоне, бицепс</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-flat" style="padding:12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-mute);font-weight:600;">11:00</div>
+          </div>
+          <div style="width:3px;background:var(--border-2);height:36px;border-radius:2px;"></div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:600;">Мария · Upper</div>
+            <div style="font-size:12px;color:var(--text-dim);">Жим стоя, тяга, плечи</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-ai">
+    <div class="safe-top"></div>
+    <div class="hdr">
+      <div>
+        <h1>AI Assistant</h1>
+        <div class="hdr-sub">8 агентов · Orchestrator активен</div>
+      </div>
+      <div style="width:32px;height:32px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M15.54 8.46l4.24-4.24"/></svg>
+      </div>
+    </div>
+
+    <div style="padding:0 20px;">
+      <div style="display:flex;gap:6px;">
+        <button class="mode-btn active" onclick="setAIMode(this)">🔍 Анализ</button>
+        <button class="mode-btn" onclick="setAIMode(this)">💡 Совет</button>
+        <button class="mode-btn" onclick="setAIMode(this)">🛠 Черновик</button>
+        <button class="mode-btn" onclick="setAIMode(this)">⚡ Действие</button>
+      </div>
+    </div>
+
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;"><div class="bubble-user">Почему у Ивана просел жим за 2 недели, хотя вес идёт по плану?</div></div>
+
+      <div style="display:flex;gap:8px;align-items:start;">
+        <div style="width:24px;height:24px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
+        </div>
+        <div class="bubble-ai">
+          <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:6px;">ORCHESTRATOR · 3 АГЕНТА</div>
+          <div>Проанализировал данные через Training, Nutrition и Client Context агентов.</div>
+          <div class="divider"></div>
+          <div style="font-weight:600;margin-bottom:6px;">Вероятные причины:</div>
+          <div style="padding-left:12px;border-left:2px solid var(--border);margin-bottom:10px;">
+            <div style="font-size:13px;margin-bottom:4px;"><span style="color:var(--accent);font-weight:600;">1.</span> Дефицит калорий −450 ккал/день (выше целевого −350)</div>
+            <div style="font-size:13px;margin-bottom:4px;"><span style="color:var(--accent);font-weight:600;">2.</span> Объём жима вырос на 22% за 2 недели</div>
+            <div style="font-size:13px;"><span style="color:var(--accent);font-weight:600;">3.</span> RIR в жиме систематически ниже плана (1.3 vs 2.0)</div>
+          </div>
+          <div style="font-size:11px;color:var(--text-mute);margin-bottom:8px;">Уверенность анализа: 81%</div>
+          <div class="conf-row"><span style="width:70px;color:var(--text-dim);">Данные</span><div class="conf-bar"><div style="width:94%;"></div></div><span>94%</span></div>
+          <div class="conf-row" style="margin-top:4px;"><span style="width:70px;color:var(--text-dim);">Анализ</span><div class="conf-bar"><div style="width:81%;"></div></div><span>81%</span></div>
+          <div class="conf-row" style="margin-top:4px;"><span style="width:70px;color:var(--text-dim);">Совет</span><div class="conf-bar"><div style="width:67%;background:var(--yellow);"></div></div><span>67%</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:start;">
+        <div style="width:24px;height:24px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6"/></svg>
+        </div>
+        <div class="bubble-ai">
+          <div style="font-size:11px;color:#60a5fa;font-weight:700;margin-bottom:6px;">💡 РЕКОМЕНДАЦИЯ · 3 ВАРИАНТА</div>
+
+          <div style="background:var(--surface-3);border-radius:10px;padding:10px;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Вариант 1 · Снизить объём</div>
+            <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Убрать 1 подход в жиме, оставить КБЖУ. Ожидаемый эффект: восстановление e1RM за 7–10 дней.</div>
+          </div>
+
+          <div style="background:var(--surface-3);border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--accent);">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:var(--accent);">Вариант 2 · Скорректировать КБЖУ ⭐</div>
+            <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Поднять калории до −300 ккал за счёт углеводов (+35г). Сохранить объём. Темп сушки: −0.4%/нед.</div>
+          </div>
+
+          <div style="background:var(--surface-3);border-radius:10px;padding:10px;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Вариант 3 · Deload</div>
+            <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">Разгрузочная неделя: −40% объёма, −15% интенсивности. Возврат к работе через 7 дней.</div>
+          </div>
+
+          <div style="display:flex;gap:6px;margin-top:10px;">
+            <button class="btn-ghost" style="flex:1;padding:10px;font-size:12px;background:var(--accent);color:white;border-color:var(--accent);" onclick="applyAIRecommendation()">Применить</button>
+            <button class="btn-ghost" style="flex:1;padding:10px;font-size:12px;" onclick="editAIRecommendation()">Изменить</button>
+            <button class="btn-ghost" style="padding:10px 12px;font-size:12px;" onclick="dismissAIRecommendation()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;"><div class="bubble-user">Покажи научное обоснование для варианта 2</div></div>
+
+      <div style="display:flex;gap:8px;align-items:start;">
+        <div style="width:24px;height:24px;border-radius:8px;background:#8b5cf6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <div class="bubble-ai">
+          <div style="font-size:11px;color:#a78bfa;font-weight:700;margin-bottom:6px;">📚 RESEARCH AGENT</div>
+          <div style="font-size:13px;line-height:1.5;">
+            <div style="margin-bottom:8px;">Tremps et al. (2021) показали, что умеренный дефицит (−300 ккал) сохраняет силовые показатели лучше, чем агрессивный (−500+), при достаточном потреблении белка (1.8–2.4 г/кг).</div>
+            <div style="margin-bottom:8px;">Barakat et al. (2020) — темп снижения массы 0.5–1%/нед оптимален для сохранения мышечной массы у тренированных.</div>
+            <div style="padding:8px;background:var(--surface-3);border-radius:8px;font-size:11px;color:var(--text-dim);">
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">Источники:</div>
+              <div>• PMC8088664 · Tremps et al.</div>
+              <div>• PMC7200927 · Barakat et al.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;"><div class="bubble-user">Запусти тестирование приложения</div></div>
+
+      <div style="display:flex;gap:8px;align-items:start;">
+        <div style="width:24px;height:24px;border-radius:8px;background:var(--purple);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div class="bubble-ai">
+          <div style="font-size:11px;color:var(--purple);font-weight:700;margin-bottom:6px;">🧪 QA AGENT · ТЕСТИРОВАНИЕ</div>
+          <div style="font-size:13px;line-height:1.5;">
+            <div style="margin-bottom:10px;">Запущено комплексное тестирование 8 компонентов системы. Результаты:</div>
             
-            event.target.classList.add('active');
-            document.getElementById(tabName + '-tab').classList.remove('hidden');
-        }
+            <div class="test-item pass">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;">Навигация</div>
+                <div style="font-size:11px;color:var(--text-dim);">Все переходы работают</div>
+              </div>
+              <span class="pill pill-green">OK</span>
+            </div>
 
-        async function addWorkout() {
-            const workout = {
-                user_id: userId,
-                exercise: document.getElementById('exercise').value,
-                sets: parseInt(document.getElementById('sets').value),
-                reps: parseInt(document.getElementById('reps').value),
-                weight: parseFloat(document.getElementById('weight').value),
-                notes: document.getElementById('notes').value
-            };
-            
-            try {
-                const response = await fetch(`${API_URL}/workouts/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(workout)
-                });
-                const result = await response.json();
-                alert('Workout saved!');
-                loadWorkouts();
-            } catch (error) {
-                alert('Error saving workout');
-            }
-        }
+            <div class="test-item pass">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;">Синхронизация</div>
+                <div style="font-size:11px;color:var(--text-dim);">Offline mode активен</div>
+              </div>
+              <span class="pill pill-green">OK</span>
+            </div>
 
-        async function loadWorkouts() {
-            try {
-                const response = await fetch(`${API_URL}/workouts/${userId}`);
-                const workouts = await response.json();
-                const list = document.getElementById('workout-list');
-                list.innerHTML = workouts.map(w => 
-                    `<div class="list-item"><strong>${w.exercise}</strong><br>${w.sets}x${w.reps} @ ${w.weight}kg</div>`
-                ).join('');
-            } catch (error) {
-                console.error('Error loading workouts');
-            }
-        }
+            <div class="test-item warn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;">Таймер тренировки</div>
+                <div style="font-size:11px;color:var(--text-dim);">Не сбрасывается при выходе</div>
+              </div>
+              <span class="pill pill-yellow">WARN</span>
+            </div>
 
-        async function addMeal() {
-            const meal = {
-                user_id: userId,
-                food: document.getElementById('food').value,
-                calories: parseInt(document.getElementById('calories').value),
-                protein: parseFloat(document.getElementById('protein').value),
-                carbs: parseFloat(document.getElementById('carbs').value),
-                fat: parseFloat(document.getElementById('fat').value)
-            };
-            
-            try {
-                const response = await fetch(`${API_URL}/meals/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(meal)
-                });
-                const result = await response.json();
-                alert('Meal saved!');
-                loadMeals();
-            } catch (error) {
-                alert('Error saving meal');
-            }
-        }
+            <div class="test-item fail">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;">Валидация RIR</div>
+                <div style="font-size:11px;color:var(--text-dim);">Можно завершить подход без выбора</div>
+              </div>
+              <span class="pill pill-red">FAIL</span>
+            </div>
 
-        async function loadMeals() {
-            try {
-                const response = await fetch(`${API_URL}/meals/${userId}`);
-                const meals = await response.json();
-                const list = document.getElementById('meal-list');
-                list.innerHTML = meals.map(m => 
-                    `<div class="list-item"><strong>${m.food}</strong><br>${m.calories} kcal | P:${m.protein}g C:${m.carbs}g F:${m.fat}g</div>`
-                ).join('');
-            } catch (error) {
-                console.error('Error loading meals');
-            }
-        }
+            <div class="test-item pass">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;">Графики</div>
+                <div style="font-size:11px;color:var(--text-dim);">Chart.js рендеринг OK</div>
+              </div>
+              <span class="pill pill-green">OK</span>
+            </div>
 
-        async function getWorkoutAdvice() {
-            document.getElementById('ai-response').style.display = 'block';
-            document.getElementById('ai-response').innerHTML = 'Generating advice...';
-            
-            try {
-                const response = await fetch(`${API_URL}/ai/recommend`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, request_type: 'workout', data: {} })
-                });
-                const result = await response.json();
-                document.getElementById('ai-response').innerHTML = `<strong>💪 ${result.recommendation}</strong>`;
-            } catch (error) {
-                document.getElementById('ai-response').innerHTML = 'Error getting advice';
-            }
-        }
+            <div style="margin-top:12px;padding:10px;background:var(--surface-3);border-radius:8px;border-left:3px solid var(--purple);">
+              <div style="font-size:11px;color:var(--purple);font-weight:700;margin-bottom:6px;">РЕКОМЕНДАЦИЯ QA AGENT</div>
+              <div style="font-size:12px;line-height:1.5;">
+                <div style="margin-bottom:6px;"><span style="color:var(--accent);font-weight:600;">Критично:</span> Добавить валидацию перед завершением подхода — RIR обязателен.</div>
+                <div><span style="color:var(--yellow);font-weight:600;">Улучшение:</span> Сбрасывать таймер при выходе из тренировки или сохранять состояние.</div>
+              </div>
+            </div>
 
-        async function getNutritionAdvice() {
-            document.getElementById('ai-response').style.display = 'block';
-            document.getElementById('ai-response').innerHTML = 'Generating advice...';
-            
-            try {
-                const response = await fetch(`${API_URL}/ai/recommend`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, request_type: 'nutrition', data: {} })
-                });
-                const result = await response.json();
-                document.getElementById('ai-response').innerHTML = `<strong>🥗 ${result.recommendation}</strong>`;
-            } catch (error) {
-                document.getElementById('ai-response').innerHTML = 'Error getting advice';
-            }
-        }
+            <div style="display:flex;gap:6px;margin-top:10px;">
+              <button class="btn-ghost" style="flex:1;padding:10px;font-size:12px;background:var(--purple);color:white;border-color:var(--purple);" onclick="fixQAIssues()">Исправить</button>
+              <button class="btn-ghost" style="flex:1;padding:10px;font-size:12px;" onclick="showQADetails()">Подробнее</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // Load data on start
-        loadWorkouts();
-        loadMeals();
-    </script>
+    <div style="position:sticky;bottom:80px;padding:0 20px 12px;background:linear-gradient(180deg,transparent,var(--bg) 30%);">
+      <div style="display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:6px 6px 6px 14px;">
+        <input class="input" id="aiInput" style="border:none;background:transparent;padding:10px 0;" placeholder="Спросите AI..." />
+        <button class="btn-ghost" style="padding:10px 14px;background:var(--accent);color:white;border-color:var(--accent);" onclick="sendAIMessage()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m5 12 14 0M13 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-profile">
+    <div class="safe-top"></div>
+    <div class="hdr">
+      <div>
+        <h1>Тренер</h1>
+        <div class="hdr-sub">Настройки и аккаунт</div>
+      </div>
+    </div>
+
+    <div style="padding:0 20px;">
+      <div class="card" style="text-align:center;padding:20px;">
+        <div class="avatar lg" style="margin:0 auto 12px;background:linear-gradient(135deg,#374151,#111827);">АК</div>
+        <div style="font-size:18px;font-weight:700;">Александр К.</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px;">@coach_alex · Pro план</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;">
+        <div class="card" style="padding:12px;text-align:center;">
+          <div style="font-size:20px;font-weight:700;">7</div>
+          <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">Клиентов</div>
+        </div>
+        <div class="card" style="padding:12px;text-align:center;">
+          <div style="font-size:20px;font-weight:700;">142</div>
+          <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">Тренировок</div>
+        </div>
+        <div class="card" style="padding:12px;text-align:center;">
+          <div style="font-size:20px;font-weight:700;">12</div>
+          <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">Программ</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">AI Агенты</div>
+    <div style="padding:0 20px;">
+      <div class="agent-card active">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Orchestrator</div>
+            <div style="font-size:11px;color:var(--text-dim);">Главный координатор</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Training Agent</div>
+            <div style="font-size:11px;color:var(--text-dim);">Анализ тренировок</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Nutrition Agent</div>
+            <div style="font-size:11px;color:var(--text-dim);">Анализ питания</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Client Context</div>
+            <div style="font-size:11px;color:var(--text-dim);">Контекст клиента</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Safety Agent</div>
+            <div style="font-size:11px;color:var(--text-dim);">Проверка ограничений</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Research Agent</div>
+            <div style="font-size:11px;color:var(--text-dim);">Научные данные</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">Recommendation</div>
+            <div style="font-size:11px;color:var(--text-dim);">Формирование предложений</div>
+          </div>
+          <span class="dot dot-green"></span>
+        </div>
+      </div>
+
+      <div class="agent-card active">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--purple);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;">QA Agent · NEW</div>
+            <div style="font-size:11px;color:var(--text-dim);">Тестирование системы</div>
+          </div>
+          <span class="dot dot-purple"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Настройки AI</div>
+    <div style="padding:0 20px;">
+      <div class="card" style="padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Уровень подсказок</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">Для клиентов по умолчанию</div>
+          </div>
+          <span class="pill pill-red">Стандарт</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="mode-btn" onclick="setHintLevel(this)">Минимум</button>
+          <button class="mode-btn active" onclick="setHintLevel(this)">Стандарт</button>
+          <button class="mode-btn" onclick="setHintLevel(this)">Максимум</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Научные обоснования</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">Research Agent</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Авто-тестирование</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">QA Agent</div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Приложение</div>
+    <div style="padding:0 20px;">
+      <div class="card-flat" style="padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="exportData()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Экспорт данных</div>
+            <div style="font-size:12px;color:var(--text-dim);">Excel, CSV, PDF</div>
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="showAuditTrail()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Audit Trail</div>
+            <div style="font-size:12px;color:var(--text-dim);">История изменений</div>
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="showExerciseDB()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;">База упражнений</div>
+            <div style="font-size:12px;color:var(--text-dim);">Общая + личная</div>
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+
+      <div class="card-flat" style="padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="showSettings()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Настройки</div>
+            <div style="font-size:12px;color:var(--text-dim);">Единицы, уведомления</div>
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-mute)" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+
+    <div style="padding:20px;">
+      <div style="text-align:center;font-size:11px;color:var(--text-mute);">Coach v1.0 · MVP 1</div>
+    </div>
+  </section>
+
+  <nav class="bottom-nav safe-bottom">
+    <div style="display:flex;">
+      <div class="nav-item active" data-screen="dashboard" onclick="showScreen('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Клиенты</span>
+      </div>
+      <div class="nav-item" data-screen="calendar" onclick="showScreen('calendar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span>Календарь</span>
+      </div>
+      <div class="nav-item" data-screen="ai" onclick="showScreen('ai')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M15.54 8.46l4.24-4.24"/></svg>
+        <span>AI</span>
+      </div>
+      <div class="nav-item" data-screen="profile" onclick="showScreen('profile')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Тренер</span>
+      </div>
+    </div>
+  </nav>
+
+</div>
+
+<div class="modal-overlay" id="addClientModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Новый клиент</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Пригласите через Telegram</div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--text-mute);font-weight:600;margin-bottom:6px;">Имя</div>
+      <input class="input" id="clientName" placeholder="Иван Петров" />
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--text-mute);font-weight:600;margin-bottom:6px;">Telegram</div>
+      <input class="input" id="clientTelegram" placeholder="@username или контакт" />
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--text-mute);font-weight:600;margin-bottom:6px;">Цель</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn-ghost goal-btn" style="padding:8px 14px;font-size:12px;background:var(--accent);color:white;border-color:var(--accent);" onclick="selectGoal(this)">Сушка</button>
+        <button class="btn-ghost goal-btn" style="padding:8px 14px;font-size:12px;" onclick="selectGoal(this)">Масса</button>
+        <button class="btn-ghost goal-btn" style="padding:8px 14px;font-size:12px;" onclick="selectGoal(this)">Сила</button>
+        <button class="btn-ghost goal-btn" style="padding:8px 14px;font-size:12px;" onclick="selectGoal(this)">Здоровье</button>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="createClient()">Создать и пригласить</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('addClientModal')">Отмена</button>
+  </div>
+</div>
+
+<script>
+  let currentWeight = 210.0;
+  let currentRepsVal = null;
+  let currentRIRVal = null;
+  let timerSec = 32 * 60 + 14;
+  let e1rmChart = null;
+  let weightChart = null;
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => {
+      n.classList.toggle('active', n.dataset.screen === name);
+    });
+    window.scrollTo(0, 0);
+    if (name === 'client') {
+      setTimeout(initCharts, 100);
+    }
+  }
+
+  function openClient(id) {
+    showScreen('client');
+  }
+
+  document.querySelectorAll('.client-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.client-tab').forEach(t => {
+        t.style.background = 'transparent';
+        t.style.color = 'var(--text-dim)';
+        t.classList.remove('active');
+      });
+      tab.style.background = 'var(--accent)';
+      tab.style.color = 'white';
+      tab.classList.add('active');
+      document.querySelectorAll('.client-content').forEach(c => c.style.display = 'none');
+      document.querySelector(`.client-content[data-content="${tab.dataset.tab}"]`).style.display = 'block';
+      if (tab.dataset.tab === 'analytics') {
+        setTimeout(initCharts, 100);
+      }
+    });
+  });
+
+  function openWorkout() {
+    showScreen('workout');
+  }
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('show');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+
+  function adjustWeight(delta) {
+    currentWeight = Math.max(0, +(currentWeight + delta).toFixed(2));
+    document.getElementById('weightDisplay').textContent = currentWeight.toFixed(1);
+  }
+
+  function setReps(n) {
+    currentRepsVal = n;
+    document.getElementById('currentReps').textContent = n;
+  }
+
+  function setRIR(el, val) {
+    document.querySelectorAll('.rir-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentRIRVal = val;
+    document.getElementById('currentRIR').textContent = 'RIR ' + val;
+  }
+
+  function completeSet() {
+    if (!currentRepsVal) {
+      alert('Укажите количество повторов');
+      return;
+    }
+    if (currentRIRVal === null) {
+      alert('Выберите RIR');
+      return;
+    }
+    const btn = event.target;
+    btn.textContent = '✓ Сохранено';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = 'Завершить подход';
+      btn.style.background = 'var(--accent)';
+      const sync = document.getElementById('syncIndicator');
+      sync.innerHTML = '<span class="dot dot-yellow" style="width:6px;height:6px;"></span><span>↻ Синхронизация...</span>';
+      setTimeout(() => {
+        sync.innerHTML = '<span class="dot dot-green"></span><span>Синхронизировано</span>';
+      }, 1200);
+    }, 800);
+  }
+
+  setInterval(() => {
+    timerSec++;
+    const m = Math.floor(timerSec / 60);
+    const s = timerSec % 60;
+    const el = document.getElementById('workoutTimer');
+    if (el) el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }, 1000);
+
+  function initCharts() {
+    const e1rmEl = document.getElementById('e1rmChart');
+    const weightEl = document.getElementById('weightChart');
+    if (!e1rmEl || !weightEl) return;
+
+    const commonOpts = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+          ticks: { color: '#6b6b6b', font: { size: 10 } }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+          ticks: { color: '#6b6b6b', font: { size: 10 } }
+        }
+      },
+      elements: {
+        point: { radius: 3, hoverRadius: 5, backgroundColor: '#e11d48', borderWidth: 0 },
+        line: { tension: 0.35, borderWidth: 2 }
+      }
+    };
+
+    if (e1rmChart) e1rmChart.destroy();
+    e1rmChart = new Chart(e1rmEl, {
+      type: 'line',
+      data: {
+        labels: ['W1','W2','W3','W4','W5','W6','W7','W8'],
+        datasets: [{
+          data: [92, 94, 95.5, 96.8, 98, 97.2, 99.1, 98.5],
+          borderColor: '#e11d48',
+          backgroundColor: (ctx) => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 140);
+            g.addColorStop(0, 'rgba(225,29,72,0.3)');
+            g.addColorStop(1, 'rgba(225,29,72,0)');
+            return g;
+          },
+          fill: true
+        }]
+      },
+      options: commonOpts
+    });
+
+    if (weightChart) weightChart.destroy();
+    weightChart = new Chart(weightEl, {
+      type: 'line',
+      data: {
+        labels: ['1','3','5','7','9','11','13','15','17','19','21','23','25','27','29'],
+        datasets: [{
+          data: [84.2, 84.0, 83.8, 83.6, 83.5, 83.3, 83.1, 83.0, 82.9, 82.8, 82.7, 82.6, 82.5, 82.4, 82.4],
+          borderColor: '#22c55e',
+          backgroundColor: (ctx) => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 140);
+            g.addColorStop(0, 'rgba(34,197,94,0.3)');
+            g.addColorStop(1, 'rgba(34,197,94,0)');
+            return g;
+          },
+          fill: true
+        }]
+      },
+      options: commonOpts
+    });
+  }
+
+  function setAIMode(btn) {
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function setHintLevel(btn) {
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function selectGoal(btn) {
+    document.querySelectorAll('.goal-btn').forEach(b => {
+      b.style.background = 'var(--surface-2)';
+      b.style.color = 'var(--text)';
+      b.style.borderColor = 'var(--border)';
+    });
+    btn.style.background = 'var(--accent)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--accent)';
+  }
+
+  function createClient() {
+    const name = document.getElementById('clientName').value;
+    const telegram = document.getElementById('clientTelegram').value;
+    if (!name || !telegram) {
+      alert('Заполните все поля');
+      return;
+    }
+    alert(`Клиент ${name} создан и приглашен через ${telegram}`);
+    closeModal('addClientModal');
+  }
+
+  function applyAIRecommendation() {
+    alert('Рекомендация применена. Изменения вступят в силу.');
+  }
+
+  function showAIDetails() {
+    alert('Подробный анализ будет доступен в следующей версии.');
+  }
+
+  function editAIRecommendation() {
+    alert('Режим редактирования рекомендации.');
+  }
+
+  function dismissAIRecommendation() {
+    alert('Рекомендация отклонена.');
+  }
+
+  function sendAIMessage() {
+    const input = document.getElementById('aiInput');
+    const message = input.value.trim();
+    if (!message) return;
+    alert(`AI обрабатывает запрос: "${message}"`);
+    input.value = '';
+  }
+
+  function fixQAIssues() {
+    alert('QA Agent исправил:\n• Добавлена валидация RIR\n• Таймер теперь сбрасывается при выходе');
+  }
+
+  function showQADetails() {
+    alert('Подробный отчет QA Agent:\n\n✓ 5 тестов пройдено\n⚠ 1 предупреждение\n✗ 1 ошибка\n\nРекомендации отправлены Orchestrator');
+  }
+
+  function exportData() {
+    alert('Экспорт данных: Excel, CSV, PDF');
+  }
+
+  function showAuditTrail() {
+    alert('Audit Trail: история всех изменений');
+  }
+
+  function showExerciseDB() {
+    alert('База упражнений: общая + личная');
+  }
+
+  function showSettings() {
+    alert('Настройки приложения');
+  }
+
+  document.getElementById('aiInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      sendAIMessage();
+    }
+  });
+
+  initCharts();
+</script>
 </body>
 </html>
